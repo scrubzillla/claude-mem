@@ -486,9 +486,59 @@ function getFailLoudThreshold(): number {
 }
 
 /**
+ * Hook events whose Claude Code semantics treat exit-2 ("blocking error") as
+ * "block the action and re-fire the hook." For these events the fail-loud
+ * exit-2 path creates an infinite loop: the worker stays unreachable, the next
+ * fire fails, exit-2 retries, ad infinitum. The plugin’s own hook-failure
+ * counter has been observed climbing into the hundreds in the wild on Windows
+ * when the worker dies but its TCP socket lingers (see issue #1531).
+ *
+ * For these events, fail-loud must degrade to silent-skip: increment the
+ * counter for telemetry, but exit 0 so Claude Code lets the action complete.
+ * Other event types (PostToolUse, PreToolUse, SessionStart, UserPromptSubmit)
+ * keep the original exit-2 behavior — for them, exit-2 surfaces the outage to
+ * the user/Claude without inducing a retry loop.
+ *
+ * Closes #987, #1235 (Stop-hook infinite loops). The Windows ghost-socket
+ * bug (#1531) is the trigger; this patch is the safety net so the trigger
+ * does not brick the user’s session.
+ */
+const STOP_CLASS_HOOK_EVENTS: ReadonlySet<string> = new Set([
+  'summarize',  // Claude Code Stop hook
+]);
+
+/**
+ * Module-level current hook event, set by `hookCommand()` before the handler
+ * runs. Read by `recordWorkerUnreachable` to decide whether fail-loud exit-2
+ * is safe to use. Hook processes are short-lived single-purpose invocations,
+ * so a module-level let is sufficient — no AsyncLocalStorage needed.
+ */
+let currentHookEvent: string | null = null;
+
+/**
+ * Set the current hook event. Called by `hookCommand()` exactly once per
+ * process before the handler runs.
+ */
+export function setCurrentHookEvent(event: string): void {
+  currentHookEvent = event;
+}
+
+/** Test-only: reset module state between unit tests. */
+export function __resetCurrentHookEventForTests(): void {
+  currentHookEvent = null;
+}
+
+/**
  * Record a worker-unreachable hook invocation. Returns the new counter value.
- * If the counter reaches the threshold, this function writes to stderr and
- * exits the process with code 2 (blocking error per Claude Code hook contract).
+ * If the counter reaches the threshold AND the current event is not stop-class,
+ * this function writes to stderr and exits the process with code 2 (blocking
+ * error per Claude Code hook contract).
+ *
+ * For stop-class events (Stop / SubagentStop) the exit-2 path is suppressed:
+ * Claude Code treats exit-2 on those as "retry the hook," which converts every
+ * worker outage into an infinite loop. The counter still increments so the
+ * telemetry stays accurate and a future SessionStart hook (where exit-2 IS
+ * safe) can surface the outage instead.
  *
  * Not a retry — does not reattempt the operation. The caller already ran the
  * single primary-path attempt and got `false` from `ensureWorkerAliveOnce`.
@@ -503,6 +553,17 @@ function recordWorkerUnreachable(): number {
 
   const threshold = getFailLoudThreshold();
   if (next.consecutiveFailures >= threshold) {
+    // Suppress exit-2 for stop-class events to prevent the retry loop.
+    // Log at warn level so the outage stays visible in the plugin log
+    // without polluting Claude Code’s stderr (which surfaces as error UI).
+    if (currentHookEvent !== null && STOP_CLASS_HOOK_EVENTS.has(currentHookEvent)) {
+      logger.warn(
+        'SYSTEM',
+        `claude-mem worker unreachable for ${next.consecutiveFailures} consecutive ${currentHookEvent} hooks — exiting 0 to avoid retry loop`,
+        { event: currentHookEvent, consecutiveFailures: next.consecutiveFailures }
+      );
+      return next.consecutiveFailures;
+    }
     process.stderr.write(
       `claude-mem worker unreachable for ${next.consecutiveFailures} consecutive hooks.\n`
     );

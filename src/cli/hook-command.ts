@@ -1,4 +1,5 @@
 import { readJsonFromStdin } from './stdin-reader.js';
+import { setCurrentHookEvent } from '../shared/worker-utils.js';
 import { getPlatformAdapter } from './adapters/index.js';
 import { AdapterRejectedInput } from './adapters/errors.js';
 import { getEventHandler } from './handlers/index.js';
@@ -87,6 +88,12 @@ async function executeHookPipeline(
 }
 
 export async function hookCommand(platform: string, event: string, options: HookCommandOptions = {}): Promise<number> {
+  // Tell worker-utils which event we are running, so its fail-loud counter
+  // can suppress exit-2 for stop-class events (Stop / SubagentStop) where
+  // Claude Code interprets exit-2 as "retry the hook" and creates an
+  // infinite loop on persistent worker outages (#987, #1235, #1531).
+  setCurrentHookEvent(event);
+
   // Suppress stderr in hook context — Claude Code shows stderr as error UI (#1181)
   // Exit 1: stderr shown to user. Exit 2: stderr fed to Claude for processing.
   // All diagnostics go to log file via logger; stderr must stay clean.
