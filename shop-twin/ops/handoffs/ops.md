@@ -1,6 +1,6 @@
-# Ops handoff (Sun Nov 8, 2026, ~09:00 UTC)
+# Ops handoff (Sun Nov 8, 2026, ~09:05 UTC)
 
-Written by the first session ("shop foreman", session_01GyhqTJDBiKpvgUxV4NSJeY) when Ian asked for an ops setup like Course Record's.
+First written by "shop foreman" (session_01GyhqTJDBiKpvgUxV4NSJeY); now kept by Ops (session_01GyhqTLsJD8kyfbCtaiAQXH, tag `shop-twin:ops`).
 
 ## Goal
 Keep Shop Twin's Builder running and fresh, and finish moving Shop Twin into its own repo.
@@ -11,9 +11,11 @@ Keep Shop Twin's Builder running and fresh, and finish moving Shop Twin into its
   1. create it empty and private (no README)
   2. give the Claude GitHub app access at https://github.com/apps/claude/installations/select_target
 - Sessions:
-  - the old builder, "shop foreman": `session_01GyhqTJDBiKpvgUxV4NSJeY`. It started you and will stop working once the new Builder is up.
-  - Builder: you start it (Next #1).
-- The old session had a PR #1 safety check-in scheduled. It removes it and unsubscribes PR #1 before it hands over.
+  - Ops: `session_01GyhqTLsJD8kyfbCtaiAQXH` ("Shop Twin · Ops").
+  - Builder: `session_01GyhqTJyFqeUqn7tqVHxykH` ("Shop Twin · Builder"), started 08:59 UTC from handoff commit 69027ef.
+  - Old "shop foreman" `session_01GyhqTJDBiKpvgUxV4NSJeY`: archive once Builder has posted its first status (see Next #1).
+- Ops is subscribed to PR activity on claude-mem#1 (since 09:00 UTC).
+- `list_sessions` has no working tags filter ("not currently available"). Use `mine: true` and match the tag. The role files and README now say so.
 
 ## Ian said (Nov 8)
 - "make a handoff and restart yourself, or build a setup like course record has with an ops agent and another agent to help you build this and have ops restart you"
@@ -29,8 +31,8 @@ Keep Shop Twin's Builder running and fresh, and finish moving Shop Twin into its
   - `prompt` "Read shop-twin/ops/handoffs/builder.md, then carry on with its Next list."
 
 ## Next
-1. **Start Builder** as above. Wait until it has posted its first status (`list_events` on it, or `get_session` status_bucket). Then `archive_session` the old session `session_01GyhqTJDBiKpvgUxV4NSJeY` (Ian's standing instruction allows it), and tell Ian in one line: "Builder is up: <title>. The old session is archived."
-2. **Subscribe** to PR activity for scrubzillla/claude-mem#1 so CI and review events reach you.
+1. ~~Start Builder~~ (done). Once it has posted its first status (`list_events` kinds assistant/result), `archive_session` the old `session_01GyhqTJDBiKpvgUxV4NSJeY` and tell Ian in one line.
+2. ~~Subscribe to PR #1~~ (done).
 3. **Repo move** (when Ian says the repo exists, or check `list_repos` when Ian next writes):
    1. `add_repo` scrubzillla/shop-twin with push access, and clone claude-mem.
    2. `git subtree split --prefix=shop-twin -b shop-twin-split`.

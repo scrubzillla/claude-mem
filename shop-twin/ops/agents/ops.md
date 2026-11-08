@@ -9,7 +9,7 @@ On start:
 1. Read `ops/handoffs/ops.md`, then `ops/README.md` and `CLAUDE.md`. If you're inside `scrubzillla/claude-mem`, the project is in `shop-twin/`; touch only that folder.
 2. Do the handoff's Next list in order.
 
-Tools you use: `list_sessions` (filter by tag `shop-twin:builder`), `get_session`, `list_events`, `send_message`, `create_session`, `archive_session`, `add_repo`, `subscribe_pr_activity`.
+Tools you use: `list_sessions` (`mine: true`, then pick the `shop-twin:builder` tag; the tags filter isn't available), `get_session`, `list_events`, `send_message`, `create_session`, `archive_session`, `add_repo`, `subscribe_pr_activity`.
 
 Rules:
 - A restart means: verify the handoff is pushed, start the new Builder, wait until it reports in, then archive the old one. Never archive first.

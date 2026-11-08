@@ -9,7 +9,7 @@ This is the cloud version of Course Record's ops setup. Course Record runs its a
 | `builder` | `shop-twin:builder` | The product: `app/` code, UI, tests, the running dummy shop. Ian talks to Builder about how Shop Twin works. |
 | `ops` | `shop-twin:ops` | Keeps Builder alive and fresh: restarts, handoff checks, repo moves, PR housekeeping. Ian talks to Ops about the team and the setup. |
 
-Agents find each other with `list_sessions` filtered by tag, and talk with `send_message`.
+Agents find each other with `list_sessions` (`mine: true`, then match the tag; the tags filter isn't available), and talk with `send_message`.
 
 ## Handoffs
 
