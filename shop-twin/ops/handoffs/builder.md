@@ -1,6 +1,6 @@
-# Builder handoff (Sun Nov 8, 2026, ~09:00 UTC)
+# Builder handoff (Sun Nov 8, 2026, ~09:10 UTC)
 
-Written by the first session ("shop foreman", session_01GyhqTJDBiKpvgUxV4NSJeY) before its restart.
+Updated by Builder session_01GyhqTJyFqeUqn7tqVHxykH.
 
 ## Goal
 Shop Twin: a live 3D floor plan of an auto repair shop, fed by Tekmetric, that a whole shop team shares. It's a restaurant host stand for cars: what's in each bay, what's waiting, what goes in next, and who's working on it. Ian sells Tekmetric and pictures this as the visual layer over the shop management system ("Tekmetric = the record and the reports; Shop Twin = how you see and run the shop").
@@ -63,7 +63,7 @@ Shop Twin: a live 3D floor plan of an auto repair shop, fed by Tekmetric, that a
 
 ## Next
 1. Start the dummy shop and report the preview port. Tell Ian it's up.
-2. **UI cleanup proposal.** Take a screenshot of the current screen and propose cuts as a picture plus a short list. Ian decides.
+2. **UI cleanup proposal: SENT to Ian Nov 8 ~09:10, waiting for a yes or no on each item.** Picture: `ops/shots/proposal-cleanup.png` (before shots: `ops/shots/before-*.png`). Numbered items: 1 KPIs 8→4 · 2 one View menu, floor plan default · 3 hide "Advance shop day" behind `?demo` · 4 no buttons on board rows (tap row = open RO) · 5 RO panel: Move + "Plan for later" link, Tear down removed · 6 activity collapsed to one line · 7 tags clip / names truncate · phone: compact bar, board as bottom sheet. Also seen: you can plan a car into a bay that's already busy ("Go to Bay 1" while Bay 1 is WIP), which is confusing.
    - Merge the 7 view buttons (Aerial, Street, Inside, Floor plan, Walls, Roof, Tags) into one **View** menu, and make the top-down floor plan the default.
    - Cut the KPIs to 4: bays in use, waiting for a bay, waiting on parts, ready for pickup.
    - RO panel: one main **Move**, "Plan for later" secondary, and **Tear down** under "More" (or remove it).
