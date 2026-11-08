@@ -2,7 +2,7 @@
 // state (spots, planned moves, activity) and is the single source every screen renders.
 import { EventEmitter } from 'node:events';
 import { SPOT_DEFS } from '../web/layout.js';
-import { OPEN_STATUS, shortName, toTwinRO } from './mapping.js';
+import { OPEN_STATUS, columnTotals, shortName, toTwinRO } from './mapping.js';
 
 const SPOT = Object.fromEntries(SPOT_DEFS.map((s) => [s.id, s]));
 const ACTIVITY_MAX = 60;
@@ -290,6 +290,7 @@ export class ShopTwin extends EventEmitter {
         status: this.statusOf(r),
         tekmetricUrl: this.roUrl(r),
       })),
+      columns: columnTotals([...this.ros.values()]),
       plans: [...this.plans],
       appointments: this.appointments,
       activity: this.activity,

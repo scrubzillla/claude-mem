@@ -25,7 +25,7 @@ npm run mock          # Node 22.9 or newer, no npm install needed
 
 Open http://localhost:8787 in two browser windows. Move a car in one and watch it move in the other.
 
-The mock Tekmetric API uses the request and response shapes documented at api.tekmetric.com, and plays out a shop day: estimates get approved, jobs finish, cars get picked up, appointments arrive. Click **Advance shop day** to step through it.
+The mock Tekmetric API uses the request and response shapes documented at api.tekmetric.com, and plays out a shop day: estimates get approved, jobs finish, cars get picked up, appointments arrive. Open the page with `?demo` and use View → **Advance shop day** to step through it.
 
 ## Connect to Tekmetric
 
@@ -76,7 +76,7 @@ The API can also write keytag, miles in/out, service writer, promise time, job t
 npm test
 ```
 
-10 tests run against the mock API:
+Unit tests (`npm test`) run against the mock API; `npm run check:ui` drives the real screen in Chromium:
 - authentication
 - paging and 429 backoff
 - first-morning layout

@@ -2,49 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Shop Twin</title>
 <link rel="icon" href="icons/icon-32.png">
 <link rel="stylesheet" href="twin.css">
 </head>
 <body>
 <div id="stage"><div id="labels"></div></div>
-<div id="loading">Loading 3D shop…</div>
+<div id="loading">Loading shop…</div>
 
 <div id="ui">
-  <header id="top" class="panel">
-    <div class="brand">
-      <h1>Shop Twin</h1>
-      <div class="sub" id="modeLine"><span class="hazard" aria-hidden="true"></span>Loading…</div>
-    </div>
-    <div class="kpis" id="kpis" aria-live="polite"></div>
-    <div class="controls">
-      <button id="boardToggle" type="button">Board</button>
-      <div class="seg" role="group" aria-label="Camera view">
-        <button type="button" id="vAerial">Aerial</button>
-        <button type="button" id="vStreet">Street</button>
-        <button type="button" id="vInside">Inside</button>
-        <button type="button" id="vPlan">Floor plan</button>
+  <header id="bar">
+    <span id="shop" class="shop"></span>
+    <nav id="cols" aria-label="Repair orders by status"></nav>
+    <span class="sp"></span>
+    <div class="menuwrap">
+      <button type="button" id="viewBtn" aria-haspopup="true" aria-expanded="false">View ▾</button>
+      <div id="viewMenu" class="menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-view="vAerial">Aerial</button>
+        <button type="button" role="menuitem" data-view="vPlan">Floor plan</button>
+        <button type="button" role="menuitem" data-view="vInside">Inside</button>
+        <button type="button" role="menuitem" data-view="vStreet">Street</button>
+        <hr>
+        <button type="button" role="menuitemcheckbox" id="tWalls" aria-checked="false">Walls down</button>
+        <button type="button" role="menuitemcheckbox" id="tRoof" aria-checked="false">Roof off</button>
+        <hr data-demo hidden>
+        <button type="button" role="menuitem" id="arrive" data-demo hidden>Advance shop day (demo)</button>
       </div>
-      <button type="button" id="tWalls" aria-pressed="false">Walls down</button>
-      <button type="button" id="tRoof" aria-pressed="false">Roof off</button>
-      <button type="button" id="tTags" aria-pressed="true">RO tags</button>
-      
-      
-      <button type="button" id="arrive" class="primary" hidden>Advance shop day</button>
     </div>
   </header>
-
-  <aside id="board" class="panel" aria-label="Shop board"></aside>
-  <section id="detail" class="panel" aria-label="Repair order" hidden></section>
-  <section id="feed" class="panel" aria-label="Activity">
-    <h2 class="feedhead">Activity</h2>
-    <ol id="feedList"></ol>
-    <p class="note" id="feedNote"></p>
-  </section>
-  <div id="hint" class="panel" hidden></div>
+  <div id="colPop" class="menu" hidden></div>
+  <section id="card" aria-label="Repair order" hidden></section>
+  <div id="hint" hidden></div>
 </div>
-<div id="toast" class="panel" hidden></div>
+<div id="toast" hidden></div>
 <script type="module" src="twin.js"></script>
 </body>
 </html>

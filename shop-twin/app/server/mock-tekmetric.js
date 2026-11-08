@@ -66,21 +66,28 @@ function seed(now) {
   }]));
 
   let jobId = 7001;
-  const job = (roId, vehicleId, customerId, name, cents, hours, authorized, techId = null) => ({
+  const job = (roId, vehicleId, customerId, name, cents, hours, authorized, techId = null, part = null, partStatus = null) => ({
     id: jobId++, repairOrderId: roId, vehicleId, customerId, name, authorized, authorizedDate: authorized ? iso(now - 3600e3) : null, selected: true,
     technicianId: techId, note: '', cannedJobId: null, jobCategoryName: null, partsTotal: Math.round(cents * 0.55), laborTotal: Math.round(cents * 0.45),
     discountTotal: 0, feeTotal: 0, subtotal: cents, archived: false, createdDate: iso(now - 5 * 3600e3), completedDate: null, updatedDate: iso(now - 3600e3),
-    labor: [{ id: jobId * 10, name, rate: 13000, hours, complete: false }], parts: [], fees: [], discounts: [], laborHours: hours, loggedHours: 0, sort: 1,
+    labor: [{ id: jobId * 10, name, rate: hours ? Math.round((part ? cents * 0.45 : cents) / hours) : 0, hours, complete: false }],
+    parts: part ? [{ id: jobId * 10 + 1, quantity: 1, brand: part[0], name: part[1], partNumber: part[2], description: null, cost: Math.round(cents * 0.33), retail: Math.round(cents * 0.55),
+      model: null, width: null, ratio: null, diameter: null, constructionType: null, loadIndex: null, speedRating: null, partType: { id: 1, code: 'PART', name: 'Part' },
+      partStatus: partStatus ? { id: partStatus === 'Ordered' ? 2 : 3, code: partStatus.toUpperCase(), name: partStatus } : null }] : [],
+    fees: [], discounts: [], laborHours: hours, loggedHours: 0, sort: 1,
   });
   const repairOrders = new Map();
+  // RO labels are set up per shop in Tekmetric; these mirror common ones. The RO's color follows its label.
+  const LABEL_COLORS = { 'Waiting on Parts': '#b4532a', 'Work Not Started': '#71717a', Diagnosing: '#5b7290', 'Quality Check': '#3f7f80',
+    'Waiting Approval': '#7c6bb0', 'Ready for Pickup': '#4d7a5c', 'Customer Called': '#6b7a3e' };
   const ro = (id, number, statusId, vehicleId, { tech = null, label = null, created = now - 4 * 3600e3, concern, jobs }) => {
     const v = vehicles.get(vehicleId);
-    const list = jobs.map(([name, cents, hours, auth]) => job(id, vehicleId, v.customerId, name, cents, hours, auth, tech));
+    const list = jobs.map(([name, cents, hours, auth, part, partStatus]) => job(id, vehicleId, v.customerId, name, cents, hours, auth, tech, part, partStatus));
     const total = list.reduce((s, j) => s + j.subtotal, 0);
     repairOrders.set(id, {
       id, repairOrderNumber: number, shopId: 1, repairOrderStatus: statusObj(statusId),
       repairOrderLabel: label ? { id: 9, code: label.toUpperCase().replace(/\W/g, ''), name: label, status: statusObj(statusId) } : null,
-      repairOrderCustomLabel: null, color: '#1786E8', appointmentStartTime: null, customerId: v.customerId, technicianId: tech, serviceWriterId: 105,
+      repairOrderCustomLabel: null, color: label ? (LABEL_COLORS[label] || '#71717a') : '#1786E8', appointmentStartTime: null, customerId: v.customerId, technicianId: tech, serviceWriterId: 105,
       vehicleId, milesIn: v.mileage, milesOut: null, keytag: String(10 + (id % 40)), completedDate: statusId === 3 ? iso(now - 1800e3) : null, postedDate: null,
       laborSales: Math.round(total * 0.45), partsSales: Math.round(total * 0.55), subletSales: 0, discountTotal: 0, feeTotal: 0, taxes: Math.round(total * 0.0825),
       amountPaid: 0, totalSales: Math.round(total * 1.0825), jobs: list, sublets: [], fees: [], discounts: [],
@@ -88,15 +95,15 @@ function seed(now) {
       createdDate: iso(created), updatedDate: iso(now - 600e3), deletedDate: null,
     });
   };
-  ro(5001, 10421, 2, 301, { tech: 101, concern: 'Grinding noise from the front when braking.', jobs: [['Front brake pads & rotors', 48912, 1.6, true], ['Brake fluid exchange', 12995, 0.8, false]] });
-  ro(5002, 10422, 2, 302, { tech: 102, label: 'Waiting on Parts', concern: 'Check engine light on, rough idle at stops.', jobs: [['Diagnose CEL P0302 (cyl 2 misfire)', 15900, 1.0, true], ['Replace ignition coil, cyl 2', 21240, 0.6, true]] });
-  ro(5003, 10423, 2, 303, { tech: 103, concern: '60k service.', jobs: [['Oil & filter change', 8999, 0.5, true], ['Tire rotation & balance', 5999, 0.6, true], ['Engine & cabin air filters', 7450, 0.3, true]] });
-  ro(5004, 10424, 1, 304, { created: todayAt(now, 9, 40), concern: 'A/C blowing warm.', jobs: [['A/C performance check', 12900, 1.0, true], ['Replace A/C condenser + recharge', 86830, 2.4, false]] });
-  ro(5005, 10425, 3, 305, { tech: 103, concern: 'Battery light on, slow crank in the morning.', jobs: [['Battery & charging system test', 0, 0.3, true], ['Replace battery (H6 AGM)', 21995, 0.4, true]] });
-  ro(5006, 10426, 1, 306, { created: now - 2 * 86400e3, concern: 'Clunk from the front end over bumps.', jobs: [['Suspension inspection', 12800, 0.8, true], ['Front struts & mounts (pair)', 134060, 3.2, false]] });
-  ro(5007, 10427, 2, 307, { concern: 'Rattle from underneath at idle.', jobs: [['Exhaust inspection', 7950, 0.5, true], ['Replace heat shield clamps', 14220, 0.7, true]] });
-  ro(5008, 10428, 2, 308, { tech: 104, concern: 'Fleet PM. Driver reports squeal from rear brakes.', jobs: [['Fleet preventive maintenance', 18900, 1.2, true], ['Rear brake pads', 39840, 1.4, true]] });
-  ro(5009, 10429, 3, 309, { tech: 101, concern: 'State inspection.', jobs: [['State safety inspection', 2550, 0.5, true]] });
+  ro(5001, 10421, 2, 301, { label: 'Diagnosing', tech: 101, concern: 'Grinding noise from the front when braking.', jobs: [['Front brake pads & rotors', 48912, 1.6, true, ['Wagner', 'Brake pads + rotors, front', 'QC1210'], 'Received'], ['Brake fluid exchange', 12995, 0.8, false, ['Valvoline', 'DOT 3 brake fluid', 'VV-DOT3'], null]] });
+  ro(5002, 10422, 2, 302, { tech: 102, label: 'Waiting on Parts', concern: 'Check engine light on, rough idle at stops.', jobs: [['Diagnose CEL P0302 (cyl 2 misfire)', 15900, 1.0, true], ['Replace ignition coil, cyl 2', 21240, 0.6, true, ['Motorcraft', 'Ignition coil', 'DG-549'], 'Ordered']] });
+  ro(5003, 10423, 2, 303, { label: 'Quality Check', tech: 103, concern: '60k service.', jobs: [['Oil & filter change', 8999, 0.5, true, ['Mobil 1', '0W-20 oil + filter', 'M1-110A'], 'Received'], ['Tire rotation & balance', 5999, 0.6, true], ['Engine & cabin air filters', 7450, 0.3, true, ['Fram', 'Air + cabin filters', 'CA11206'], 'Received']] });
+  ro(5004, 10424, 1, 304, { label: 'Waiting Approval', created: todayAt(now, 9, 40), concern: 'A/C blowing warm.', jobs: [['A/C performance check', 12900, 1.0, true], ['Replace A/C condenser + recharge', 86830, 2.4, false, ['Denso', 'A/C condenser', '477-0864'], null]] });
+  ro(5005, 10425, 3, 305, { label: 'Ready for Pickup', tech: 103, concern: 'Battery light on, slow crank in the morning.', jobs: [['Battery & charging system test', 0, 0.3, true], ['Replace battery (H6 AGM)', 21995, 0.4, true, ['Interstate', 'Battery H6 AGM', 'MTX-48/H6'], 'Received']] });
+  ro(5006, 10426, 1, 306, { label: 'Waiting Approval', created: now - 2 * 86400e3, concern: 'Clunk from the front end over bumps.', jobs: [['Suspension inspection', 12800, 0.8, true], ['Front struts & mounts (pair)', 134060, 3.2, false, ['Monroe', 'Quick-Strut assembly (pair)', '172668'], null]] });
+  ro(5007, 10427, 2, 307, { concern: 'Rattle from underneath at idle.', jobs: [['Exhaust inspection', 7950, 0.5, true], ['Replace heat shield clamps', 14220, 0.7, true, ['Dorman', 'Heat shield clamps', '674-001'], 'Ordered']] });
+  ro(5008, 10428, 2, 308, { label: 'Work Not Started', tech: 104, concern: 'Fleet PM. Driver reports squeal from rear brakes.', jobs: [['Fleet preventive maintenance', 18900, 1.2, true, ['Motorcraft', 'Oil + filter kit', 'FL-500S'], 'Received'], ['Rear brake pads', 39840, 1.4, true, ['Motorcraft', 'Brake pads, rear', 'BR-1712'], 'Received']] });
+  ro(5009, 10429, 3, 309, { label: 'Customer Called', tech: 101, concern: 'State inspection.', jobs: [['State safety inspection', 2550, 0.5, true]] });
   ro(5010, 10430, 2, 310, { created: todayAt(now, 8, 5), concern: 'Shudder at highway speed.', jobs: [['Road test & wheel balance', 11900, 1.0, true]] });
 
   const appt = (id, customerId, vehicleId, h, m, description) => ({

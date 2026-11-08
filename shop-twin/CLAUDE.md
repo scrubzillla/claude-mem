@@ -13,10 +13,10 @@ Shop Twin is a live 3D floor plan of an auto repair shop, fed by Tekmetric. Bays
 
 ```bash
 cd app && npm run mock     # Node >= 22.9, no npm install; mock Tekmetric + simulated shop day
-npm test                   # 10 tests, about 3 s
+npm test                   # 14 tests, about 3 s; npm run check:ui = Playwright check of the screen (needs the mock running)
 ```
 
-The page is at http://localhost:8787, and the mock API runs on port 8788. In a cloud session, start it in the background and tell Ian the port with `report_preview_port` (name "shop twin"). In mock mode, `MOCK_TICK_SECONDS` sets how often a shop event happens, and the **Advance shop day** button forces one.
+The page is at http://localhost:8787, and the mock API runs on port 8788. In a cloud session, start it in the background and tell Ian the port with `report_preview_port` (name "shop twin"). In mock mode, `MOCK_TICK_SECONDS` sets how often a shop event happens, and View → **Advance shop day** (shown only with `?demo` in the URL) forces one.
 
 ## Layout of the code
 

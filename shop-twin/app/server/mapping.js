@@ -29,6 +29,20 @@ export function toTwinRO(ro, { customers, vehicles, employees }) {
     total: cents(j.subtotal),
     auth: !!j.authorized,
     techId: j.technicianId ?? null,
+    labor: (j.labor || []).map((l) => ({
+      name: l.name || j.name || 'Labor',
+      hours: Number(l.hours) || 0,
+      total: cents(Math.round((Number(l.rate) || 0) * (Number(l.hours) || 0))),
+      done: !!l.complete,
+    })),
+    parts: (j.parts || []).map((x) => ({
+      name: x.name || x.description || [x.brand, x.model].filter(Boolean).join(' ') || 'Part',
+      brand: x.brand || null,
+      number: x.partNumber || null,
+      qty: Number(x.quantity) || 1,
+      total: cents(Math.round((Number(x.retail) || 0) * (Number(x.quantity) || 1))),
+      status: partStatusName(x.partStatus),
+    })),
   }));
   const techId = ro.technicianId ?? jobs.find((j) => j.techId)?.techId ?? null;
   const make = v?.make || 'Vehicle';
@@ -41,6 +55,8 @@ export function toTwinRO(ro, { customers, vehicles, employees }) {
     tmStatusId: ro.repairOrderStatus?.id ?? null,
     tmStatusName: TM_STATUS[ro.repairOrderStatus?.id] || ro.repairOrderStatus?.name || 'Open',
     label: ro.repairOrderLabel?.name || null,
+    labelColor: ro.repairOrderLabel ? (ro.color || null) : null,
+    total: typeof ro.totalSales === 'number' ? cents(ro.totalSales) : jobs.reduce((s, j) => s + j.total, 0),
     customLabel: ro.repairOrderCustomLabel?.name || null,
     technicianId: techId,
     tech: shortName(employees.get(techId)),
@@ -66,6 +82,32 @@ export function toTwinRO(ro, { customers, vehicles, employees }) {
     concern: (ro.customerConcerns || []).map((x) => x?.concern).filter(Boolean).join(' · ') || 'No concern recorded.',
     jobs,
   };
+}
+
+// partStatus is null in Tekmetric's example; when present it may be an object or a code string.
+function partStatusName(st) {
+  if (!st) return null;
+  if (typeof st === 'string') return st.replace(/_/g, ' ').toLowerCase();
+  return String(st.name || st.code || '').replace(/_/g, ' ').toLowerCase() || null;
+}
+
+/** Tekmetric's three board columns, with money, car count and label breakdown for each. */
+export const COLUMNS = [[1, 'estimate', 'Estimates'], [2, 'wip', 'In progress'], [3, 'complete', 'Completed']];
+export function columnTotals(ros) {
+  return COLUMNS.map(([statusId, key, name]) => {
+    const list = ros.filter((r) => r.tmStatusId === statusId);
+    const labels = new Map();
+    for (const r of list) {
+      const n = r.label || 'No label';
+      const e = labels.get(n) || { name: n, color: r.label ? r.labelColor : null, count: 0, total: 0 };
+      e.count++; e.total += r.total || 0; labels.set(n, e);
+    }
+    return {
+      key, name, count: list.length,
+      total: Math.round(list.reduce((s, r) => s + (r.total || 0), 0) * 100) / 100,
+      labels: [...labels.values()].sort((a, b) => (a.name === 'No label') - (b.name === 'No label') || b.count - a.count),
+    };
+  });
 }
 
 const PART_RULES = [

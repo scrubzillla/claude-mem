@@ -188,3 +188,30 @@ test('passcode protects the twin and cross-site posts are refused', async (t) =>
   assert.equal(csrf.status, 403);
   await new Promise((r) => server.close(r));
 });
+
+test('jobs carry labor and part lines; columns total money, cars and labels per Tekmetric status', async (t) => {
+  const { twin } = await setup(t);
+  const snap = twin.snapshot();
+  const coil = ro(snap, 10422).jobs.find((j) => /ignition coil/i.test(j.name));
+  assert.equal(coil.labor.length, 1);
+  assert.equal(coil.labor[0].hours, 0.6);
+  assert.equal(coil.parts.length, 1);
+  assert.equal(coil.parts[0].name, 'Ignition coil');
+  assert.equal(coil.parts[0].status, 'ordered');
+  assert.ok(Math.abs(coil.labor[0].total + coil.parts[0].total - coil.total) < 0.02, 'labor + parts = job subtotal');
+  assert.equal(ro(snap, 10422).label, 'Waiting on Parts');
+  assert.match(ro(snap, 10422).labelColor, /^#[0-9a-f]{6}$/i);
+
+  const [est, wip, done] = snap.columns;
+  assert.deepEqual(snap.columns.map((c) => c.key), ['estimate', 'wip', 'complete']);
+  assert.equal(est.count + wip.count + done.count, snap.ros.length);
+  for (const c of snap.columns) {
+    const ros = snap.ros.filter((r) => r.tmStatusId === { estimate: 1, wip: 2, complete: 3 }[c.key]);
+    assert.equal(c.count, ros.length);
+    assert.ok(Math.abs(c.total - ros.reduce((s, r) => s + r.total, 0)) < 0.01);
+    assert.equal(c.labels.reduce((s, l) => s + l.count, 0), c.count);
+  }
+  assert.ok(wip.labels.some((l) => l.name === 'Waiting on Parts' && l.count === 1));
+  assert.equal(wip.labels.at(-1).name, 'No label', 'unlabeled ROs are listed last');
+  assert.ok(Math.abs(ro(snap, 10422).total - 402.04) < 0.02, 'RO total is Tekmetric totalSales (with tax)');
+});

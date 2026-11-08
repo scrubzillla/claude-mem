@@ -600,7 +600,7 @@ function fmtWhen(iso) {
   const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   return d.toDateString() === new Date().toDateString() ? `Today ${time}` : `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${time}`;
 }
-function log(msg) { state.feed.unshift({ t: fmtClock(new Date().toISOString()), msg }); renderFeed(); }
+function log(msg) { state.feed.unshift({ t: fmtClock(new Date().toISOString()), msg }); }
 function toast(msg) {
   const t = $('#toast'); t.textContent = msg; t.hidden = false;
   clearTimeout(toast.h); toast.h = setTimeout(() => (t.hidden = true), 4200);
@@ -775,145 +775,106 @@ const VIEWS = {
   vInside: () => { setRoof(1); flyTo(new THREE.Vector3(13.4, 3.4, -1.0), new THREE.Vector3(-4, 1.2, -8)); },
   vPlan: () => { setWalls(1); setRoof(1); flyTo(new THREE.Vector3(3, 78, 2.5), new THREE.Vector3(3, 0, 2.4)); },
 };
-function setWalls(v) { state.walls = v; $('#tWalls').setAttribute('aria-pressed', String(!!v)); }
-function setRoof(v) { state.roof = v; $('#tRoof').setAttribute('aria-pressed', String(!!v)); }
+function setWalls(v) { state.walls = v; $('#tWalls').setAttribute('aria-checked', String(!!v)); }
+function setRoof(v) { state.roof = v; $('#tRoof').setAttribute('aria-checked', String(!!v)); }
 
 /* =========================================================================
-   10. UI RENDERING
+   10. UI RENDERING (v4: one thin bar, the 3D shop, and a card next to the selected car)
    ========================================================================= */
-function refresh() { renderKPIs(); renderBoard(); renderDetail(); renderTags(); renderHint(); syncPlanVisuals(); }
-function renderKPIs() {
-  const open = ros.filter((r) => !r.closed);
-  const placed = open.filter((r) => spotById[r.location]);
-  const inBays = open.filter((r) => spotById[r.location]?.type === 'bay').length;
-  const sum = (pred) => open.reduce((a, r) => a + r.jobs.filter(pred).reduce((s, j) => s + j.total, 0), 0);
-  const approved = sum((j) => j.auth), pending = sum((j) => !j.auth);
-  const parts = open.filter((r) => r.status === 'parts').length;
-  const ready = open.filter((r) => r.status === 'ready').length;
-  const waiting = open.length - placed.length;
-  const items = [
-    ['On site', placed.length, ''], ['Bays in use', `${inBays}/${SPOTS.filter((s) => s.type === 'bay').length}`, ''],
-    ['Approved work', money(approved).replace(/\.\d\d$/, ''), ''], ['Awaiting approval', money(pending).replace(/\.\d\d$/, ''), ''],
-    ['Waiting parts', parts, parts ? 'alert' : ''], ['Ready', ready, ready ? 'good' : ''],
-  ];
-  if (state.appointments.length) items.push(['Expected today', state.appointments.length, '']);
-  if (waiting) items.push(['Not checked in', waiting, '']);
-  const html = items.map(([l, v, c]) => `<div class="kpi ${c}"><b>${v}</b><span>${l}</span></div>`).join('');
-  const k = $('#kpis');
-  if (k.__html !== html) { k.innerHTML = html; k.__html = html; }
+const COL_ORDER = { 1: 'estimate', 2: 'wip', 3: 'complete' };
+const colKey = (r) => COL_ORDER[r.tmStatusId] || 'wip';
+const labelColor = (r) => r.labelColor || `var(--c-${colKey(r)})`;
+const money0 = (n) => '$' + Math.round(n || 0).toLocaleString('en-US');
+const ui = { col: null, label: null }; // open column popover; label filter that dims other cars
+
+function refresh() { renderCols(); renderColPop(); renderCard(); renderTags(); renderHint(); syncPlanVisuals(); }
+function renderCols() {
+  const cols = MODE.columns || [];
+  const html = cols.map((c) => `<button type="button" data-col="${c.key}" class="${ui.col === c.key ? 'on' : ''}" style="--k:var(--c-${c.key})" aria-expanded="${ui.col === c.key}">
+    <i></i><span>${esc(c.name)}</span><b>${money0(c.total)}</b><em>${c.count}</em></button>`).join('');
+  const el = $('#cols');
+  if (el.__html !== html) { el.innerHTML = html; el.__html = html; }
 }
-const pill = (s) => `<span class="pill s-${s}">${STATUS[s].label}</span>`;
-function boardRow(r, loc) {
-  return `<button type="button" class="row ${state.selected === r.id ? 'sel' : ''}" data-ro="${r.id}">
-    <span class="loc">${esc(loc)}</span>
-    <span class="veh">${esc(vehName(r.vehicle))}<small>#${esc(r.number)} · ${esc(String(r.customer.name).split(' (')[0])}</small></span>
-    <span class="pill s-${r.status}" title="${STATUS[r.status].label}">${STATUS[r.status].short}</span></button>`;
+function renderColPop() {
+  const pop = $('#colPop');
+  const c = ui.col && (MODE.columns || []).find((x) => x.key === ui.col);
+  if (!c) { pop.hidden = true; return; }
+  const html = c.labels.length
+    ? c.labels.map((l) => `<button type="button" data-label="${esc(l.name)}" class="${ui.label === l.name ? 'on' : ''}">
+        <span class="dot" style="--k:${l.color ? esc(l.color) : `var(--c-${c.key})`}"></span>${esc(l.name)}<b>${l.count} · ${money0(l.total)}</b></button>`).join('')
+    : '<button type="button" disabled>No repair orders</button>';
+  if (pop.__html !== html) { pop.innerHTML = html; pop.__html = html; }
+  const btn = $(`#cols [data-col="${c.key}"]`);
+  if (btn) pop.style.left = btn.getBoundingClientRect().left + 'px';
+  pop.hidden = false;
 }
-function renderBoard() {
-  const open = ros.filter((r) => !r.closed);
-  const order = ['approved', 'estimate', 'parts', 'wip', 'ready'];
-  const byStatus = (a, b) => order.indexOf(a.status) - order.indexOf(b.status);
-  const plans = [...state.plans].map(([rid, sid]) => [roById(rid), spotById[sid]]).filter(([r, s]) => r && s);
-  const upNext = plans.map(([r, s]) => {
-    const occ = occupant(s.id);
-    return `<div class="prow"><button type="button" class="row ${state.selected === r.id ? 'sel' : ''}" data-ro="${r.id}">
-      <span class="loc">${esc(r.location || 'IN')}→${s.id}</span><span class="veh">${esc(vehName(r.vehicle))}<small>#${esc(r.number)}${occ ? ` · after #${esc(occ.number)}` : ' · spot open'}</small></span><span></span></button>
-      <button type="button" class="go ${occ ? '' : 'primary'}" data-go="${r.id}" ${r.moving ? 'disabled' : ''}>${occ ? 'Wait' : 'Go'}</button></div>`;
-  }).join('');
-  const waiting = open.filter((r) => r.status === 'approved' && spotById[r.location]?.type !== 'bay' && !state.plans.has(r.id));
-  const bays = SPOTS.filter((s) => s.type === 'bay').map((s) => {
-    const r = occupant(s.id);
-    return r ? boardRow(r, s.label) : `<div class="row empty"><span class="loc">${s.label}</span><span class="veh">Open</span><span></span></div>`;
-  }).join('');
-  const lot = open.filter((r) => spotById[r.location] && spotById[r.location].type !== 'bay').sort(byStatus);
-  const unplaced = open.filter((r) => !spotById[r.location]).sort(byStatus);
-  const appts = state.appointments.map((a) => `<div class="row appt"><span class="loc">${esc(fmtClock(a.at))}</span>
-      <span class="veh">${esc(a.vehicle || 'Vehicle')}<small>${esc(a.customer)}${a.description ? ` · ${esc(a.description)}` : ''}</small></span><span></span></div>`).join('');
-  const html = `
-    <div class="group"><div class="ghead"><h2>Up next · ${plans.length} planned</h2>${waiting.length ? `<button type="button" data-auto="1">Auto-plan ${waiting.length}</button>` : ''}</div>
-      ${upNext || '<div class="row empty"><span></span><span class="veh">No planned moves. Select a vehicle and choose Plan move.</span><span></span></div>'}</div>
-    <div class="group"><h2>Bays</h2>${bays}</div>
-    <div class="group"><h2>Lot · ${lot.length} vehicle${lot.length === 1 ? '' : 's'}</h2>${lot.map((r) => boardRow(r, r.location)).join('') || '<div class="row empty"><span></span><span class="veh">Lot is empty</span><span></span></div>'}</div>
-    ${unplaced.length ? `<div class="group"><h2>Not checked in · ${unplaced.length}</h2>${unplaced.map((r) => `<div class="prow">${boardRow(r, '—')}<button type="button" class="go" data-checkin="${r.id}">Check in</button></div>`).join('')}</div>` : ''}
-    ${appts ? `<div class="group"><h2>Expected today · ${state.appointments.length}</h2>${appts}</div>` : ''}`;
-  const board = $('#board');
-  if (board.__html !== html) { board.innerHTML = html; board.__html = html; }
+const matchesFilter = (r) => !ui.label || (colKey(r) === ui.col && (r.label || 'No label') === ui.label);
+function lineRows(r, j) {
+  const rows = [];
+  for (const l of j.labor || []) rows.push(`<tr><td class="k">L</td><td>${l.hours.toFixed(1)} h${l.name && l.name !== j.name ? ` · ${esc(l.name)}` : ''} · ${esc(r.tech || 'No tech')}${l.done ? ' <span class="ok">· done</span>' : ''}</td><td>${money(l.total)}</td></tr>`);
+  for (const p of j.parts || []) {
+    const st = p.status ? ` <span class="${/order|back/.test(p.status) ? 'warn' : 'ok'}">· ${esc(p.status)}</span>` : '';
+    rows.push(`<tr><td class="k">P</td><td>${p.qty > 1 ? `${p.qty}× ` : ''}${esc(p.name)}${st}</td><td>${money(p.total)}</td></tr>`);
+  }
+  if (!rows.length && j.hrs) rows.push(`<tr><td class="k">L</td><td>${j.hrs.toFixed(1)} h</td><td></td></tr>`);
+  return rows.join('');
 }
-function renderDetail() {
-  const d = $('#detail');
+function renderCard() {
+  const d = $('#card');
   const r = state.selected && roById(state.selected);
-  if (!r) { d.hidden = true; return; }
-  d.hidden = false;
+  if (!r) { d.hidden = true; d.__html = ''; return; }
   const v = r.vehicle;
-  const meta = MODE.meta || {};
-  const approved = r.jobs.filter((j) => j.auth).reduce((s, j) => s + j.total, 0);
-  const pending = r.jobs.filter((j) => !j.auth).reduce((s, j) => s + j.total, 0);
-  const td = state.teardown === r.id;
   const placed = !!spotById[r.location];
   const plan = state.plans.get(r.id);
-  const moveBtns = plan
-    ? `<button type="button" class="primary" id="aGo" ${r.moving ? 'disabled' : ''}>Go to ${spotById[plan].label}</button><button type="button" id="aUnplan">Clear plan</button>`
-    : `<button type="button" class="primary" id="aMove" ${r.moving ? 'disabled' : ''}>${placed ? 'Move now' : 'Check in'}</button><button type="button" id="aPlan" ${r.moving ? 'disabled' : ''}>Plan move</button>`;
-  const techs = meta.techs || [];
-  const techField = meta.writes && techs.length
-    ? `<select id="aTech" aria-label="Technician"><option value="">Unassigned</option>${techs.map((t) => `<option value="${t.id}" ${String(t.id) === String(r.technicianId) ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>`
-    : esc(r.tech ?? 'Unassigned');
-  const notes = [r.keytag ? `Keytag ${r.keytag}` : null, r.createdDate ? `Opened ${fmtWhen(r.createdDate)}` : null].filter(Boolean).join(' · ');
+  const where = r.moving ? 'Moving' : spotById[r.location]?.label ?? 'Not checked in';
+  const total = r.total ?? r.jobs.reduce((s, j) => s + j.total, 0);
+  const move = plan
+    ? `<button type="button" class="pr" id="aGo" ${r.moving ? 'disabled' : ''}>Move to ${esc(spotById[plan].label)}</button><button type="button" id="aUnplan">Clear plan</button>`
+    : `<button type="button" class="pr" id="aMove" ${r.moving ? 'disabled' : ''}>${placed ? 'Move' : 'Check in'}</button><button type="button" id="aPlan" ${r.moving ? 'disabled' : ''}>Plan</button>`;
   const html = `
-    <div class="dhead"><span class="ro">RO #${esc(r.number)}</span>${pill(r.status)}<button type="button" class="x" id="dClose" aria-label="Close">✕</button></div>
-    <div><p class="vehicle">${esc(vehName(v))}</p></div>
-    <div class="src">In Tekmetric: <b>${esc(r.tmStatusName || 'Open')}</b>${r.label ? ` <span class="chip">${esc(r.label)}</span>` : ''}${r.customLabel ? ` <span class="chip">${esc(r.customLabel)}</span>` : ''}</div>
-    ${td ? '<div class="tdbanner"><b>Teardown view.</b> Highlighted parts are the ones on this RO\'s jobs. Tap a job to isolate it.</div>' : ''}
-    <dl class="meta">
-      <dt>Customer</dt><dd>${esc(r.customer.name)}</dd>
-      <dt>Phone</dt><dd class="mono">${esc(r.customer.phone)}</dd>
-      <dt>Location</dt><dd>${esc(spotById[r.location]?.label ?? 'Not checked in')}${r.moving ? ' (moving)' : ''}${plan ? ` → <b>${spotById[plan].label}</b> (planned)` : ''}</dd>
-      <dt>Tech</dt><dd>${techField}</dd>
-      <dt>${esc(r.promisedLabel || 'Promised')}</dt><dd>${esc(fmtWhen(r.promisedAt))}</dd>
-      <dt>VIN</dt><dd class="mono">${esc(v.vin)}</dd>
-      <dt>Mileage</dt><dd class="mono">${v.miles ? `${Number(v.miles).toLocaleString()} mi` : '—'}</dd>
-      <dt>Color</dt><dd><span class="swatch" style="background:${esc(v.color)}"></span>${esc(v.colorName)}</dd>
-    </dl>
-    <p class="concern">“${esc(r.concern)}”</p>
-    <div>
-      <h3>Jobs</h3>
-      ${r.jobs.length ? `<table class="jobs"><tbody>
-        ${r.jobs.map((j, i) => `<tr data-job="${i}" class="${td && state.focusPart === j.part ? 'focus' : ''}">
-          <td>${esc(j.name)}<span class="part">${PART_NAMES[j.part] || 'General'} · ${j.hrs.toFixed(1)} hr</span></td>
-          <td class="num">${money(j.total)}<br><span class="auth ${j.auth ? 'yes' : 'no'}">${j.auth ? 'Approved' : 'Pending'}</span></td></tr>`).join('')}
-      </tbody></table>` : '<p class="notes">No jobs on this repair order yet.</p>'}
-      <div class="totals"><span>Approved <b>${money(approved)}</b></span><span>Pending <b>${money(pending)}</b></span></div>
+    <div class="h"><span class="ro">#${esc(r.number)}</span><span class="dot" style="--k:${esc(labelColor(r))}"></span><span class="lbl">${esc(r.label || r.tmStatusName || '')}</span>
+      <span class="tot">${money(total)}</span><button type="button" class="x" id="dClose" aria-label="Close">✕</button></div>
+    <div class="b">
+      <div class="v">${esc(vehName(v))}</div>
+      <div class="m">${esc(r.customer.name)} · ${esc(r.tech || 'No tech')} · ${esc(where)}${plan ? ` → ${esc(spotById[plan].label)}` : ''}</div>
+      <div class="c">${esc(r.concern)}</div>
+      ${r.jobs.length ? `<table>${r.jobs.map((j) => `<tr class="j ${j.auth ? '' : 'pend'}"><td colspan="2">${esc(j.name)}</td><td>${money(j.total)}</td></tr>${lineRows(r, j)}`).join('')}</table>` : '<div class="muted">No jobs yet.</div>'}
     </div>
-    ${notes ? `<p class="notes">${esc(notes)}</p>` : ''}
-    <div class="actions">
-      ${moveBtns}
-      ${placed ? `<button type="button" id="aTear" ${r.moving ? 'disabled' : ''}>${td ? 'Reassemble' : 'Tear down'}</button>` : ''}
-      ${r.tekmetricUrl ? `<a class="btnlink" id="aOpen" href="${esc(r.tekmetricUrl)}" target="_blank" rel="noopener">Open in Tekmetric</a>` : ''}
-    </div>`;
-  // Live updates arrive every few seconds: only redraw when something changed, so open menus and clicks survive.
+    <div class="f">${move}<span class="sp"></span>${r.tekmetricUrl ? `<a id="aOpen" href="${esc(r.tekmetricUrl)}" target="_blank" rel="noopener">Tekmetric ↗</a>` : ''}</div>`;
+  d.hidden = false;
+  // Live updates arrive every few seconds: only redraw when something changed, so clicks survive.
   if (d.__html === html) return;
   d.innerHTML = html;
   d.__html = html;
-  $('#dClose').onclick = () => { exitTeardown(); state.selected = null; refresh(); };
+  $('#dClose').onclick = () => { state.selected = null; refresh(); };
   if ($('#aMove')) $('#aMove').onclick = () => startPlacing(r.id, placed ? 'now' : 'checkin');
   if ($('#aPlan')) $('#aPlan').onclick = () => startPlacing(r.id, 'plan');
   if ($('#aGo')) $('#aGo').onclick = () => runPlan(r.id);
   if ($('#aUnplan')) $('#aUnplan').onclick = () => cancelPlan(r.id);
-  if ($('#aTear')) $('#aTear').onclick = () => (td ? exitTeardown() : enterTeardown(r.id));
-  if ($('#aTech')) $('#aTech').onchange = (e) => { if (e.target.value) assignTech(r, e.target.value); };
-  d.querySelectorAll('tr[data-job]').forEach((tr) => (tr.onclick = () => {
-    if (!placed) return;
-    const part = r.jobs[+tr.dataset.job].part;
-    if (state.teardown === r.id && state.focusPart === part) state.focusPart = null; else { if (state.teardown !== r.id) enterTeardown(r.id, part); state.focusPart = part; }
-    buildPartLabels(); refresh();
-  }));
+}
+// Keep the card beside its car as the camera or the car moves (called every frame).
+const cardV = new THREE.Vector3();
+function placeCard() {
+  const d = $('#card');
+  if (d.hidden) return;
+  const car = cars.get(state.selected);
+  if (!car) return;
+  cardV.copy(car.position).setY(1.4).project(camera);
+  const x = (cardV.x + 1) / 2 * innerWidth, y = (1 - cardV.y) / 2 * innerHeight;
+  const w = d.offsetWidth, h = d.offsetHeight, gap = 46;
+  let left = x + gap; if (left + w > innerWidth - 10) left = x - gap - w;
+  left = Math.max(10, Math.min(innerWidth - w - 10, left));
+  const top = Math.max(54, Math.min(innerHeight - h - 10, y - 40));
+  d.style.left = Math.round(left) + 'px'; d.style.top = Math.round(top) + 'px';
 }
 function renderTags() {
+  $('#labels').classList.toggle('filtering', !!ui.label);
   cars.forEach((car, id) => {
     const r = ros.find((x) => x.id === id), u = car.userData; // includes cars still driving away
     if (!r) return;
-    u.el.className = `tag s-${r.status} ${state.selected === id ? 'sel' : ''}`;
-    u.el.innerHTML = `#${esc(r.number)}<b>${STATUS[r.status].short}</b>`;
+    u.el.className = `tag ${state.selected === id ? 'sel' : ''} ${matchesFilter(r) ? 'match' : ''}`;
+    const html = `<span class="dot" style="--k:${esc(labelColor(r))}"></span>${esc(r.number)}`;
+    if (u.el.__html !== html) { u.el.innerHTML = html; u.el.__html = html; u.el.title = r.label || r.tmStatusName || ''; }
     u.tag.visible = state.teardown !== id;
   });
 }
@@ -923,42 +884,58 @@ function renderHint() {
     const r = roById(state.placing);
     if (!r) { h.hidden = true; return; }
     const plan = state.placeMode === 'plan';
-    const verb = plan ? 'Plan where' : state.placeMode === 'checkin' ? 'Pick where to park' : 'Pick a spot for';
     const keep = $('#hSpot')?.value;
     const opts = placeableSpots(r).map((s) => {
       const occ = occupant(s.id);
       return `<option value="${s.id}" ${s.id === keep ? 'selected' : ''}>${s.label}${occ ? ` (after #${esc(occ.number)})` : ''}</option>`;
     }).join('');
     h.hidden = false;
-    const html = `<span>${verb} RO #${esc(r.number)}${plan ? ' goes next' : ''}: tap a yellow spot or choose one</span>
+    const html = `<span>${plan ? 'Plan' : 'Move'} #${esc(r.number)} to</span>
       <select id="hSpot" aria-label="Spot">${opts}</select>
-      <button type="button" class="primary" id="hPlace">${plan ? 'Plan' : 'Move'}</button>
+      <button type="button" class="pr" id="hPlace">${plan ? 'Plan' : 'Move'}</button>
       <button type="button" id="hCancel">Cancel</button>`;
     if (h.__html === html) return;
     h.innerHTML = html;
     h.__html = html;
     $('#hCancel').onclick = cancelPlacing;
     $('#hPlace').onclick = () => { const sp = spotById[$('#hSpot').value]; if (sp) (plan ? setPlan : moveTo)(r, sp); };
-  } else h.hidden = true;
+  } else { h.hidden = true; h.__html = ''; }
 }
-function renderFeed() {
-  $('#feedList').innerHTML = state.feed.map((f) => `<li><time>${f.t}</time><span>${esc(f.msg)}</span></li>`).join('') || '<li><time></time><span>No changes yet.</span></li>';
-}
-$('#board').addEventListener('click', (e) => {
-  const go = e.target.closest('[data-go]'); if (go) { runPlan(go.dataset.go); return; }
-  const ci = e.target.closest('[data-checkin]'); if (ci) { select(ci.dataset.checkin, false); startPlacing(ci.dataset.checkin, 'checkin'); return; }
-  if (e.target.closest('[data-auto]')) { autoPlan(); return; }
-  const b = e.target.closest('[data-ro]'); if (!b) return;
-  select(b.dataset.ro, true);
-  if (matchMedia('(max-width: 760px)').matches) $('#board').classList.remove('open');
+$('#cols').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-col]'); if (!b) return;
+  const k = b.dataset.col;
+  if (ui.col === k) { ui.col = null; ui.label = null; } else { ui.col = k; ui.label = null; }
+  closeViewMenu(); refresh();
 });
-$('#boardToggle').onclick = () => $('#board').classList.toggle('open');
-Object.keys(VIEWS).forEach((k) => ($('#' + k).onclick = VIEWS[k]));
+$('#colPop').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-label]'); if (!b) return;
+  ui.label = ui.label === b.dataset.label ? null : b.dataset.label;
+  refresh();
+});
+function closeViewMenu() { $('#viewMenu').hidden = true; $('#viewBtn').setAttribute('aria-expanded', 'false'); }
+$('#viewBtn').onclick = () => {
+  const open = $('#viewMenu').hidden;
+  $('#viewMenu').hidden = !open; $('#viewBtn').setAttribute('aria-expanded', String(open));
+  if (open) { ui.col = null; ui.label = null; refresh(); }
+};
+$('#viewMenu').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.view) { VIEWS[b.dataset.view](); closeViewMenu(); }
+});
+addEventListener('pointerdown', (e) => {
+  if (!e.target.closest('.menuwrap')) closeViewMenu();
+  if (!e.target.closest('#cols, #colPop') && ui.col && !ui.label) { ui.col = null; refresh(); }
+});
 $('#tWalls').onclick = () => setWalls(state.walls ? 0 : 1);
 $('#tRoof').onclick = () => setRoof(state.roof ? 0 : 1);
-$('#tTags').onclick = (e) => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', String(on)); $('#labels').classList.toggle('no-tags', !on); };
-$('#arrive').onclick = simulateArrival;
-addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (state.placing) cancelPlacing(); else if (state.teardown) exitTeardown(); else { state.selected = null; refresh(); } } });
+$('#arrive').onclick = () => { closeViewMenu(); simulateArrival(); };
+addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (state.placing) cancelPlacing();
+  else if (!$('#viewMenu').hidden) closeViewMenu();
+  else if (ui.col) { ui.col = null; ui.label = null; refresh(); }
+  else { state.selected = null; refresh(); }
+});
 
 /* =========================================================================
    11. PICKING
@@ -1110,25 +1087,26 @@ function applyState(st) {
   state.feed = (st.activity || []).map((a) => ({ t: fmtClock(a.at), msg: a.msg }));
   if (state.selected && !roById(state.selected)) state.selected = null;
   if (state.placing) buildPads();
+  MODE.columns = st.columns || [];
   renderMode();
-  renderFeed();
   refresh();
 }
 function renderMode() {
   const m = MODE.meta || {};
-  const line = $('#modeLine');
   const shop = esc(m.shop?.name || 'Shop');
   const s = m.updatedAt ? Math.max(0, Math.round((Date.now() - m.updatedAt) / 1000)) : null;
-  const ago = s === null ? 'not yet' : s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`;
-  const source = m.mode === 'mock' ? 'Mock Tekmetric (simulated shop day)' : `Tekmetric ${esc(m.mode || '')}`;
-  if (!MODE.connected) line.innerHTML = '<span class="err-dot" aria-hidden="true"></span>Reconnecting to the Shop Twin server…';
-  else if (m.error) line.innerHTML = `<span class="err-dot" aria-hidden="true"></span>${shop} · Tekmetric problem: ${esc(m.error)}`;
-  else if (!m.updatedAt) line.innerHTML = `<span class="hazard" aria-hidden="true"></span>${shop} · Loading repair orders from Tekmetric…`;
-  else line.innerHTML = `<span class="live-dot" aria-hidden="true"></span>${shop} · ${source} · updated ${ago}`;
-  $('#arrive').hidden = m.mode !== 'mock';
-  $('#feedNote').textContent = m.mode === 'mock'
-    ? 'Simulated data. Every screen connected to this server sees the same shop.'
-    : 'Every screen connected to this server sees the same shop. Tekmetric stays the source of record.';
+  const ago = s === null ? '' : s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)} min ago` : `${Math.round(s / 3600)} h ago`;
+  let dot = 'live-dot', title = `Tekmetric${m.mode === 'mock' ? ' (simulated)' : ''} · updated ${ago}`;
+  if (!MODE.connected) { dot = 'err-dot'; title = 'Reconnecting to the Shop Twin server…'; }
+  else if (m.error) { dot = 'err-dot'; title = `Tekmetric problem: ${m.error}`; }
+  else if (!m.updatedAt) { dot = 'wait-dot'; title = 'Loading repair orders from Tekmetric…'; }
+  const html = `<span class="${dot}"></span>${shop}${m.mode === 'mock' ? ' <small>demo</small>' : ''}`;
+  const el = $('#shop');
+  if (el.__html !== html) { el.innerHTML = html; el.__html = html; }
+  el.title = title;
+  // demo controls only in mock mode, and only when asked for with ?demo
+  const demo = m.mode === 'mock' && new URLSearchParams(location.search).has('demo');
+  document.querySelectorAll('[data-demo]').forEach((x) => (x.hidden = !demo));
 }
 setInterval(renderMode, 5000);
 function connect() {
@@ -1154,9 +1132,8 @@ async function boot() {
 /* =========================================================================
    13. BOOT + LOOP
    ========================================================================= */
-const ring = new THREE.Mesh(new THREE.RingGeometry(3.0, 3.25, 64), new THREE.MeshBasicMaterial({ color: 0xf2b705, transparent: true, opacity: 0.9, depthWrite: false }));
+const ring = new THREE.Mesh(new THREE.RingGeometry(3.0, 3.25, 64), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false }));
 ring.rotation.x = -PI / 2; ring.position.y = 0.04; ring.visible = false; scene.add(ring);
-renderFeed();
 await boot();
 $('#loading').remove();
 
@@ -1215,6 +1192,7 @@ function frame() {
   ring.visible = !!sc && !state.teardown;
   if (sc) { ring.position.x = sc.position.x; ring.position.z = sc.position.z; ring.scale.setScalar(1 + 0.03 * Math.sin(time * 3)); }
   controls.update();
+  placeCard();
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
   requestAnimationFrame(frame);
