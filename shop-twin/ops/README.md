@@ -29,7 +29,7 @@ Rewrite it whenever you finish a step. Commit and push it, so the agent can be r
    - Do this when Ian says "restart", when context is past about 60% (check `get_session` → `context_usage`), or before a big new phase.
 2. **Ops:**
    - Check that the sha is on the remote branch and that the handoff file changed.
-   - Start a fresh Builder with `create_session`: the same repo and branch, `outcome_branch` set to that branch, tags `["shop-twin:builder"]`, title `Shop Twin · Builder`, `append_system_prompt` = `ops/agents/builder.md`, and prompt "Read ops/handoffs/builder.md, then carry on with Next."
+   - Start a fresh Builder with `create_session`: the environment in `ops/handoffs/ops.md` → Settings, the same repo and branch, `outcome_branch` set to that branch, tags `["shop-twin:builder"]`, title `Shop Twin · Builder`, `append_system_prompt` = `ops/agents/builder.md`, and prompt "Read ops/handoffs/builder.md, then carry on with Next."
    - Wait until it reports in, then `archive_session` the old Builder.
    - Update `ops/handoffs/ops.md`, and tell Ian in the Ops chat (one line, with the new session).
 3. **Ian's standing instruction (Nov 8, 2026):** "have ops restart you". Ops may archive a Builder session it has replaced, without asking again. Ops never archives a session for any other reason without asking Ian.

@@ -15,6 +15,9 @@ Keep Shop Twin's Builder running and fresh, and finish moving Shop Twin into its
   - Builder: `session_01GyhqTJyFqeUqn7tqVHxykH` ("Shop Twin · Builder"), started 08:59 UTC from handoff commit 69027ef.
   - Old "shop foreman" `session_01GyhqTJDBiKpvgUxV4NSJeY`: **still not archived.** At 09:01 UTC `archive_session` was denied by the auto-mode permission check ("External System Writes"). Ian has to approve it, add an allow rule for `mcp__claude-code-remote__archive_session`, or archive it himself in the app.
 - Ops is subscribed to PR activity on claude-mem#1 (since 09:00 UTC).
+- Builder handoff last pushed at 4d5c30f (09:38 UTC).
+- Waiting on Ian: `scrubzillla/shop-twin` still doesn't exist (`list_repos` at ~09:30 UTC). Ops can't create repos from this session.
+- Ideas offered to Ian, waiting on his yes: (a) after the move, add Ponytail plus 3 Superpowers skills (systematic-debugging, verification-before-completion, test-driven-development) in the repo's `.claude/`; (b) after the UI cleanup, Builder upgrades vendored three.js r160 → r187 with before/after screenshots.
 - `list_sessions` has no working tags filter ("not currently available"). Use `mine: true` and match the tag. The role files and README now say so.
 
 ## Ian said (Nov 8)
@@ -26,6 +29,7 @@ Keep Shop Twin's Builder running and fresh, and finish moving Shop Twin into its
 - Restart protocol: see `ops/README.md`.
 - Create Builder with `create_session`:
   - `source_url` https://github.com/scrubzillla/claude-mem, `source_revision` and `outcome_branch` `claude/3d-shop-visualizer-kijam9` (after the move: the new repo, branch `main`)
+  - `environment_id` **env_01Boz3bqSsnpYPzaxs2ppufQ** (personal env "shop-twin", Ian approved 09:3x UTC Nov 8; allows dl.polyhaven.org, api.polyhaven.com, ambientcg.com for textures, plus package registries). Builder (session_01GyhqTJyFqeUqn7tqVHxykH) runs on the default env and can't switch; it moves on its next restart.
   - `tags` ["shop-twin:builder"], `title` "Shop Twin · Builder"
   - `append_system_prompt` = the contents of `ops/agents/builder.md` plus this line: "The project is in shop-twin/ inside claude-mem; ignore claude-mem's root CLAUDE.md."
   - `prompt` "Read shop-twin/ops/handoffs/builder.md, then carry on with its Next list."
