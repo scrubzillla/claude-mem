@@ -16,7 +16,7 @@ Keep Shop Twin's Builder running and fresh, and finish moving Shop Twin into its
   - Old "shop foreman" `session_01GyhqTJDBiKpvgUxV4NSJeY`: **still not archived.** At 09:01 UTC `archive_session` was denied by the auto-mode permission check ("External System Writes"). Ian has to approve it, add an allow rule for `mcp__claude-code-remote__archive_session`, or archive it himself in the app.
 - Ops is subscribed to PR activity on claude-mem#1 (since 09:00 UTC).
 - Builder handoff last pushed at 4d5c30f (09:38 UTC).
-- Waiting on Ian: `scrubzillla/shop-twin` still doesn't exist (`list_repos` at ~09:30 UTC). Ops can't create repos from this session.
+- **Repo move in progress (~09:50 UTC).** Ian created `scrubzillla/shop-twin`; Ops attached it (push access) and pushed `git subtree split --prefix=shop-twin` to its `main` (f61248c). Builder was asked to hand off; after its handoff sha: re-split (deterministic, so it fast-forwards), push main, fix paths, restart Builder on the new repo, close PR #1.
 - Ideas offered to Ian, waiting on his yes: (a) after the move, add Ponytail plus 3 Superpowers skills (systematic-debugging, verification-before-completion, test-driven-development) in the repo's `.claude/`; (b) after the UI cleanup, Builder upgrades vendored three.js r160 → r187 with before/after screenshots.
 - `list_sessions` has no working tags filter ("not currently available"). Use `mine: true` and match the tag. The role files and README now say so.
 
