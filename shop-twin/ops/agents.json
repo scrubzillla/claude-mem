@@ -1,0 +1,18 @@
+{
+  "builder": {
+    "name": "Builder",
+    "tag": "shop-twin:builder",
+    "title": "Shop Twin · Builder",
+    "role": "ops/agents/builder.md",
+    "handoff": "ops/handoffs/builder.md",
+    "note": "Builds the product (app/). Restarted by Ops from its handoff."
+  },
+  "ops": {
+    "name": "Ops",
+    "tag": "shop-twin:ops",
+    "title": "Shop Twin · Ops",
+    "role": "ops/agents/ops.md",
+    "handoff": "ops/handoffs/ops.md",
+    "note": "Keeps Builder running and fresh; repo and PR housekeeping."
+  }
+}

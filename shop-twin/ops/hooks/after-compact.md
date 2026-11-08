@@ -1,0 +1,1 @@
+Your chat was just summarized. Reread your handoff before doing anything else: `ops/handoffs/builder.md` if you are Builder, `ops/handoffs/ops.md` if you are Ops (your role is in your system prompt). Then check `git status` and `git log -3`, and carry on with Next.
