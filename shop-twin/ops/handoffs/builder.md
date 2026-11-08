@@ -41,6 +41,13 @@ Shop Twin: a live 3D floor plan of an auto repair shop, fed by Tekmetric, that a
 **`index.html`** is the old static demo (artifact https://claude.ai/artifact/CPBsJJq64w3RFXQtu7MTCw).
 
 ## Ian said (Nov 8)
+- **Users = people behind the counter:** service writer, shop foreman, owner. Desktop only.
+- **No color key for every car.** Wants Tekmetric's 3 columns (Estimates / WIP / Completed), each with a **$ total and car count** (hard to see in Tekmetric today). Inside each column, the **RO label** phases with counts. The RO label is highlighted on each car.
+- **Clicking a car opens a card anchored next to the car in 3D**, not a fixed panel at top right. "More about the 3D visual than anything": see where the car is.
+- In the card: **labor lines and part lines shown separately**, plus what's going on with the ticket.
+- Dispatch stays in Tekmetric's tech board. Moving cars here is fine, but it isn't the dispatch tool.
+- Ideas: Tekmetric's activity feed; webhooks/notifications on RO status change and RO label change.
+- **Big idea / possible moat:** high-functioning shops have cameras everywhere, but the cameras never connect to the SMS. Overlay SMS data on camera feeds, or let a camera feed drive car positions; sell a camera system integrated with the SMS. Not for now. Keep "where a car's location comes from" swappable (manual / camera later).
 - **Desktop only for now** (drop phone work). **"WAY too much info on the screen at once."** Simplify for the guys: visuals, not numbers. "Other softwares overload them with numbers."
 - The name is **Shop Twin**. It's a work-related project; Ian has said they'll handle the job side, so don't raise it again.
 - Main value: managing the workflow and seeing cars move in and out of the shop, triage, what's in each bay, and what's coming next. Big teams need to know where cars are and where they're going next. Teardown/"fix the car in 3D" is a side feature.
@@ -64,7 +71,8 @@ Shop Twin: a live 3D floor plan of an auto repair shop, fed by Tekmetric, that a
 
 ## Next
 1. Start the dummy shop and report the preview port. Tell Ian it's up.
-2. **v2 proposal SENT after Ian's 'too much info' reply: `ops/shots/proposal-simple.png`.** No KPI numbers at all. Five status colors (needs bay / being worked on / parts / ready / dropped off) with a legend. Tags show the model name plus a color dot, with no RO number. No board panel and no activity log. One Up Next strip at the bottom, one View menu, and a small car card on click (vehicle, customer, status, concern, tech, Move, Plan for later). VIN, mileage, jobs and dollars are dropped. Waiting for Ian's go. Superseded v1 below.
+2. **v3 SENT (current): `ops/shots/proposal-columns.png`.** Top: brand, 3 column tiles ($, cars, label chips), View menu. Car tags: `#RO` plus a colored label chip. Card anchored to the car: RO #, label, vehicle, customer, tech, concern, jobs each with LABOR and PART lines (part status: on order / in stock), one Move button. Waiting for Ian's go. **Data gaps to build:** `mapping.js` jobs have no labor/part lines (map Tekmetric `labor[]`/`parts[]`), and RO totals are needed per column. The mock API needs parts lines plus more RO labels with colors (Tekmetric label has a color; check the docs). Server test for column totals.
+   - v2 (superseded): **proposal SENT after Ian's 'too much info' reply: `ops/shots/proposal-simple.png`.** No KPI numbers at all. Five status colors (needs bay / being worked on / parts / ready / dropped off) with a legend. Tags show the model name plus a color dot, with no RO number. No board panel and no activity log. One Up Next strip at the bottom, one View menu, and a small car card on click (vehicle, customer, status, concern, tech, Move, Plan for later). VIN, mileage, jobs and dollars are dropped. Waiting for Ian's go. Superseded v1 below.
    - v1 (superseded): **UI cleanup proposal: SENT to Ian Nov 8 ~09:10, waiting for a yes or no on each item.** Picture: `ops/shots/proposal-cleanup.png` (before shots: `ops/shots/before-*.png`). Numbered items: 1 KPIs 8→4 · 2 one View menu, floor plan default · 3 hide "Advance shop day" behind `?demo` · 4 no buttons on board rows (tap row = open RO) · 5 RO panel: Move + "Plan for later" link, Tear down removed · 6 activity collapsed to one line · 7 tags clip / names truncate · phone: compact bar, board as bottom sheet. Also seen: you can plan a car into a bay that's already busy ("Go to Bay 1" while Bay 1 is WIP), which is confusing.
    - Merge the 7 view buttons (Aerial, Street, Inside, Floor plan, Walls, Roof, Tags) into one **View** menu, and make the top-down floor plan the default.
    - Cut the KPIs to 4: bays in use, waiting for a bay, waiting on parts, ready for pickup.
