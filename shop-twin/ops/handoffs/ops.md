@@ -13,7 +13,7 @@ Keep Shop Twin's Builder running and fresh, and finish moving Shop Twin into its
 - Sessions:
   - Ops: `session_01GyhqTLsJD8kyfbCtaiAQXH` ("Shop Twin · Ops").
   - Builder: `session_01GyhqTJyFqeUqn7tqVHxykH` ("Shop Twin · Builder"), started 08:59 UTC from handoff commit 69027ef.
-  - Old "shop foreman" `session_01GyhqTJDBiKpvgUxV4NSJeY`: archive once Builder has posted its first status (see Next #1).
+  - Old "shop foreman" `session_01GyhqTJDBiKpvgUxV4NSJeY`: **still not archived.** At 09:01 UTC `archive_session` was denied by the auto-mode permission check ("External System Writes"). Ian has to approve it, add an allow rule for `mcp__claude-code-remote__archive_session`, or archive it himself in the app.
 - Ops is subscribed to PR activity on claude-mem#1 (since 09:00 UTC).
 - `list_sessions` has no working tags filter ("not currently available"). Use `mine: true` and match the tag. The role files and README now say so.
 
@@ -31,7 +31,7 @@ Keep Shop Twin's Builder running and fresh, and finish moving Shop Twin into its
   - `prompt` "Read shop-twin/ops/handoffs/builder.md, then carry on with its Next list."
 
 ## Next
-1. ~~Start Builder~~ (done). Once it has posted its first status (`list_events` kinds assistant/result), `archive_session` the old `session_01GyhqTJDBiKpvgUxV4NSJeY` and tell Ian in one line.
+1. ~~Start Builder~~ (done; it started the shop, reported port 8787, and is on its Next #2). Archive the old `session_01GyhqTJDBiKpvgUxV4NSJeY` once Ian OKs the permission (see State). Don't work around the denial.
 2. ~~Subscribe to PR #1~~ (done).
 3. **Repo move** (when Ian says the repo exists, or check `list_repos` when Ian next writes):
    1. `add_repo` scrubzillla/shop-twin with push access, and clone claude-mem.
