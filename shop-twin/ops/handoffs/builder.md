@@ -41,6 +41,7 @@ Shop Twin: a live 3D floor plan of an auto repair shop, fed by Tekmetric, that a
 **`index.html`** is the old static demo (artifact https://claude.ai/artifact/CPBsJJq64w3RFXQtu7MTCw).
 
 ## Ian said (Nov 8)
+- **Desktop only for now** (drop phone work). **"WAY too much info on the screen at once."** Simplify for the guys: visuals, not numbers. "Other softwares overload them with numbers."
 - The name is **Shop Twin**. It's a work-related project; Ian has said they'll handle the job side, so don't raise it again.
 - Main value: managing the workflow and seeing cars move in and out of the shop, triage, what's in each bay, and what's coming next. Big teams need to know where cars are and where they're going next. Teardown/"fix the car in 3D" is a side feature.
 - Build to the Tekmetric API. A shop-owner friend will apply for API access. (I advised: the buddy's application is fine for a pilot, but the product's own application should come from Ian or Ian's company, because the credentials belong to whoever applies.)
@@ -63,7 +64,8 @@ Shop Twin: a live 3D floor plan of an auto repair shop, fed by Tekmetric, that a
 
 ## Next
 1. Start the dummy shop and report the preview port. Tell Ian it's up.
-2. **UI cleanup proposal: SENT to Ian Nov 8 ~09:10, waiting for a yes or no on each item.** Picture: `ops/shots/proposal-cleanup.png` (before shots: `ops/shots/before-*.png`). Numbered items: 1 KPIs 8→4 · 2 one View menu, floor plan default · 3 hide "Advance shop day" behind `?demo` · 4 no buttons on board rows (tap row = open RO) · 5 RO panel: Move + "Plan for later" link, Tear down removed · 6 activity collapsed to one line · 7 tags clip / names truncate · phone: compact bar, board as bottom sheet. Also seen: you can plan a car into a bay that's already busy ("Go to Bay 1" while Bay 1 is WIP), which is confusing.
+2. **v2 proposal SENT after Ian's 'too much info' reply: `ops/shots/proposal-simple.png`.** No KPI numbers at all. Five status colors (needs bay / being worked on / parts / ready / dropped off) with a legend. Tags show the model name plus a color dot, with no RO number. No board panel and no activity log. One Up Next strip at the bottom, one View menu, and a small car card on click (vehicle, customer, status, concern, tech, Move, Plan for later). VIN, mileage, jobs and dollars are dropped. Waiting for Ian's go. Superseded v1 below.
+   - v1 (superseded): **UI cleanup proposal: SENT to Ian Nov 8 ~09:10, waiting for a yes or no on each item.** Picture: `ops/shots/proposal-cleanup.png` (before shots: `ops/shots/before-*.png`). Numbered items: 1 KPIs 8→4 · 2 one View menu, floor plan default · 3 hide "Advance shop day" behind `?demo` · 4 no buttons on board rows (tap row = open RO) · 5 RO panel: Move + "Plan for later" link, Tear down removed · 6 activity collapsed to one line · 7 tags clip / names truncate · phone: compact bar, board as bottom sheet. Also seen: you can plan a car into a bay that's already busy ("Go to Bay 1" while Bay 1 is WIP), which is confusing.
    - Merge the 7 view buttons (Aerial, Street, Inside, Floor plan, Walls, Roof, Tags) into one **View** menu, and make the top-down floor plan the default.
    - Cut the KPIs to 4: bays in use, waiting for a bay, waiting on parts, ready for pickup.
    - RO panel: one main **Move**, "Plan for later" secondary, and **Tear down** under "More" (or remove it).
