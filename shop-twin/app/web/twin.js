@@ -3,6 +3,8 @@ import * as THREE from './vendor/three.module.min.js';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from './vendor/CSS2DRenderer.js';
 import { RoomEnvironment } from './vendor/RoomEnvironment.js';
+import { Sky } from './vendor/Sky.js';
+import { sunPosition } from './sun.js';
 import { SPOT_DEFS, STREET_IN_DEF, STREET_OUT_DEF, BAY_W, BAY_X0, WALL_H, DOOR_W, DOOR_H, bayX } from './layout.js';
 
 const PI = Math.PI;
@@ -86,6 +88,30 @@ sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.03;
 sun.target.position.set(3, 0, 2);
 scene.add(sun, sun.target);
+sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.radius = 3;
+
+/* ---------- live sky: the sun sits where it really is over the shop right now ---------- */
+const SHOP_GEO = { lat: 29.76, lon: -95.37 }; // Houston; later from the shop's address
+const skyDome = new Sky(); skyDome.scale.setScalar(450); scene.add(skyDome);
+Object.assign(skyDome.material.uniforms, {});
+skyDome.material.uniforms.turbidity.value = 6;
+skyDome.material.uniforms.rayleigh.value = 1.4;
+skyDome.material.uniforms.mieCoefficient.value = 0.004;
+skyDome.material.uniforms.mieDirectionalG.value = 0.8;
+const sunDir = new THREE.Vector3();
+function liveSun() {
+  const { el, az } = sunPosition(Date.now(), SHOP_GEO.lat, SHOP_GEO.lon);
+  const shown = Math.max(el, 6 * PI / 180); // at night keep a low sun so the yard still reads; the dark theme handles night
+  // scene: -z is north (building back wall), +x east
+  sunDir.set(Math.sin(az) * Math.cos(shown), Math.sin(shown), -Math.cos(az) * Math.cos(shown));
+  skyDome.material.uniforms.sunPosition.value.copy(sunDir);
+  sun.position.copy(sunDir).multiplyScalar(60).add(sun.target.position);
+  const low = 1 - Math.min(1, shown / (35 * PI / 180));
+  sun.color.setHSL(0.09, 0.55 * low + 0.15, 0.62 + 0.25 * (1 - low));
+  sun.intensity = 2.0 + 1.0 * (1 - low);
+}
+liveSun(); setInterval(liveSun, 60000);
 
 const bayLights = [], poleLights = [];
 
@@ -136,7 +162,7 @@ function textTex(text, opt = {}) {
 /* ---------- materials ---------- */
 const M = {
   asphalt: new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.96 }),
-  grass: new THREE.MeshStandardMaterial({ color: 0x6d8650, roughness: 1 }),
+  grass: new THREE.MeshStandardMaterial({ map: canvasTex(512, 512, (c, w, h) => noise(c, w, h, '#7b8a5c', 0.18, 30000), [60, 60]), roughness: 1 }),
   concrete: new THREE.MeshStandardMaterial({ map: concreteTex, roughness: 0.9 }),
   epoxy: new THREE.MeshStandardMaterial({ map: epoxyTex, roughness: 0.42, metalness: 0.05 }),
   street: new THREE.MeshStandardMaterial({ color: 0x2c3032, roughness: 0.95 }),
@@ -155,7 +181,7 @@ const M = {
   wood: new THREE.MeshStandardMaterial({ color: 0x8a6b4a, roughness: 0.7 }),
   rubber: new THREE.MeshStandardMaterial({ color: 0x151617, roughness: 0.92 }),
   trunk: new THREE.MeshStandardMaterial({ color: 0x5b4632, roughness: 1 }),
-  leaf: new THREE.MeshStandardMaterial({ color: 0x4f7a3a, roughness: 0.95, flatShading: true }),
+  leaf: new THREE.MeshStandardMaterial({ color: 0x3f5a2e, roughness: 0.9 }),
   pad: new THREE.MeshBasicMaterial({ color: 0xf2b705, transparent: true, opacity: 0.32, depthWrite: false }),
   padHover: new THREE.MeshBasicMaterial({ color: 0xf2b705, transparent: true, opacity: 0.7, depthWrite: false }),
 };
@@ -210,9 +236,13 @@ for (let i = 0; i <= 5; i++) flat(STRIPE * 1.2, 4.4, M.paintYellow, BAY_X0 + BAY
 function tree(x, z, s = 1) {
   const g = new THREE.Group();
   box(0.3 * s, 2.4 * s, 0.3 * s, M.trunk, 0, 1.2 * s, 0, g);
-  const f1 = new THREE.Mesh(new THREE.IcosahedronGeometry(1.9 * s, 1), M.leaf); f1.position.y = 3.6 * s; f1.castShadow = true;
-  const f2 = new THREE.Mesh(new THREE.IcosahedronGeometry(1.3 * s, 1), M.leaf); f2.position.set(0.7 * s, 4.6 * s, 0.3 * s); f2.castShadow = true;
-  g.add(f1, f2); g.position.set(x, 0, z); g.rotation.y = Math.random() * 6; scene.add(g);
+  // a loose canopy of overlapping blobs reads as foliage; a single faceted ball reads as a toy
+  for (let i = 0; i < 7; i++) {
+    const r = (1.0 + Math.random() * 0.7) * s, a = Math.random() * 2 * PI;
+    const f = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 3), M.leaf);
+    f.position.set(Math.cos(a) * 0.9 * s, (3.3 + Math.random() * 1.6) * s, Math.sin(a) * 0.9 * s);
+    f.scale.y = 0.85; f.castShadow = true; f.receiveShadow = true; g.add(f);
+  } g.position.set(x, 0, z); g.rotation.y = Math.random() * 6; scene.add(g);
 }
 [[-23, -14], [-23, -4], [-23, 8], [-22, 17], [29, -14], [29, -3], [29, 10], [-6, -20], [12, -20], [24, 18]].forEach(([x, z], i) => tree(x, z, 0.85 + (i % 3) * 0.15));
 function pole(x, z) {
@@ -990,18 +1020,18 @@ function isDark() {
 function applyTheme() {
   const dark = isDark();
   const sky = new THREE.Color(dark ? 0x0f1620 : 0xcdd7dd);
-  scene.background = sky; scene.fog.color.copy(sky);
+  skyDome.visible = !dark;
+  scene.background = dark ? sky : null; scene.fog.color.set(dark ? 0x0f1620 : 0xc4cfd6);
   hemi.intensity = dark ? 0.16 : 0.7;
   hemi.color.set(dark ? 0x4a5a78 : 0xdfe9f2);
-  sun.intensity = dark ? 0.35 : 2.6;
-  sun.color.set(dark ? 0x9db3e0 : 0xfff0d8);
+  if (dark) { sun.intensity = 0.35; sun.color.set(0x9db3e0); } else liveSun();
   poleLights.forEach((l) => (l.intensity = dark ? 140 : 0));
   bayLights.forEach((l) => (l.intensity = dark ? 34 : 18));
   officeLight.intensity = dark ? 26 : 10;
   M.glass.emissive.set(dark ? 0x6b5a3a : 0x000000);
   sign.material.emissive.set(dark ? 0x6e5600 : 0x000000);
   sign.material.emissiveMap = dark ? signTex : null; sign.material.needsUpdate = true;
-  M.grass.color.set(dark ? 0x2f3b29 : 0x6d8650);
+  M.grass.color.set(dark ? 0x4a5246 : 0xffffff);
   SHARED.head.emissiveIntensity = dark ? 1.6 : 0.5;
   SHARED.tail.emissiveIntensity = dark ? 1.2 : 0.5;
   renderer.toneMappingExposure = dark ? 1.15 : 1.0;
