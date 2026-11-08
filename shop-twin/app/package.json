@@ -1,0 +1,13 @@
+{
+  "name": "shop-twin",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Live 3D floor plan of an auto repair shop, fed by the Tekmetric API.",
+  "type": "module",
+  "engines": { "node": ">=22.9" },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server/index.js",
+    "mock": "TEKMETRIC_ENV=mock node server/index.js",
+    "test": "node --test test/*.test.js"
+  }
+}

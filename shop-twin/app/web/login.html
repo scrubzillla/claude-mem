@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Twin · Sign in</title>
+<link rel="icon" href="icons/icon-32.png">
+<link rel="stylesheet" href="twin.css">
+<style>
+  body { overflow: auto; display: grid; place-items: center; min-height: 100vh; padding-inline: 16px; box-sizing: border-box; }
+  form { width: min(360px, 100%); padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+  h1 { margin: 0; font: 700 28px/1 var(--fd); text-transform: uppercase; letter-spacing: .02em; }
+  label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  input { font: 500 16px var(--fm); padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-solid); color: var(--ink); }
+  input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  #err { min-height: 1.4em; margin: 0; color: var(--s-parts); font-size: 13px; }
+</style>
+</head>
+<body>
+<form id="f" class="panel">
+  <h1>Shop Twin</h1>
+  <span class="hazard" aria-hidden="true"></span>
+  <label for="passcode">Shop passcode</label>
+  <input id="passcode" name="passcode" type="password" autocomplete="current-password" required autofocus>
+  <button type="submit" class="primary">Open the shop</button>
+  <p id="err" role="alert"></p>
+</form>
+<script>
+document.getElementById('f').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('err');
+  err.textContent = '';
+  try {
+    const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passcode: document.getElementById('passcode').value }) });
+    if (res.ok) { location.href = '/'; return; }
+    err.textContent = (await res.json().catch(() => ({}))).error || 'Could not sign in.';
+  } catch {
+    err.textContent = 'Could not reach the Shop Twin server.';
+  }
+});
+</script>
+</body>
+</html>
